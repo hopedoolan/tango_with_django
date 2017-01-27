@@ -1,6 +1,6 @@
 <!DOCTYPE html>
+{% load staticfiles %}
 <html>
-
     <head>
         <title>About</title>
     </head>
@@ -10,10 +10,10 @@
         <h2> This tutorial has been put together by Hope</h2>
         <div>
             <a href="/rango/">Home</a><br />
-            <img src= "/static/images/dog.jpg" alt="picture of puppy "/>
+            <img src="/static/images/rango.jpg" alt="rango "/>
         </div>
         <div>
-            <img src= "/media/cat.jpg" alt="picture of cat"/>
+            <img src= "{{MEDIA_URL}}cat.jpg" alt="picture of cat"/>
         </div>
     </body>
 
