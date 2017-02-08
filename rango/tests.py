@@ -1,253 +1,176 @@
+
+# Chapter 3
 from django.test import TestCase
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.core.urlresolvers import reverse
+import os
+
+#Chapter 4
 from django.contrib.staticfiles import finders
 
-# Thanks to Enzo Roiz https://github.com/enzoroiz who made these tests during an internship with us
+#Chapter 5
+from rango.models import Page, Category
+import populate_rango
+import test_utils
 
-class GeneralTests(TestCase):
-    def test_serving_static_files(self):
-        # If using static media properly result is not NONE once it finds rango.jpg
-        result = finders.find('images/rango.jpg')
-        self.assertIsNotNone(result)
+#Chapter 6
+from rango.decorators import chapter6
 
+#Chapter 7
+from rango.decorators import chapter7
+from rango.forms import CategoryForm, PageForm
 
-class IndexPageTests(TestCase):
+#Chapter 8
+from django.template import loader
+from django.conf import settings
+from rango.decorators import chapter8
+import os.path
 
-    def test_index_contains_hello_message(self):
-        # Check if there is the message 'Rango Says'
-        # Chapter 4
-        response = self.client.get(reverse('index'))
-        self.assertIn(b'Rango says', response.content)
+#Chapter 9
+from rango.models import User, UserProfile
+from rango.forms import UserForm, UserProfileForm
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.files.storage import default_storage
+from rango.decorators import chapter9
 
-    def test_index_using_template(self):
-        # Check the template used to render index page
-        # Chapter 4
-        response = self.client.get(reverse('index'))
-        self.assertTemplateUsed(response, 'rango/index.html')
+# ===== Chapter 9
+class Chapter9ModelTests(TestCase):
+    def test_user_profile_model(self):
+        # Create a user
+        user, user_profile = test_utils.create_user()
 
-    def test_rango_picture_displayed(self):
-        # Check if is there an image called 'rango.jpg' on the index page
-        # Chapter 4
-        response = self.client.get(reverse('index'))
-        self.assertIn(b'img src="/static/images/rango.jpg', response.content)
+        # Check there is only the saved user and its profile in the database
+        all_users = User.objects.all()
+        self.assertEquals(len(all_users), 1)
 
-    def test_index_has_title(self):
-        # Check to make sure that the title tag has been used
-        # And that the template contains the HTML from Chapter 4
-        response = self.client.get(reverse('index'))
-        self.assertIn(b'<title>', response.content)
-        self.assertIn(b'</title>', response.content)
+        all_profiles = UserProfile.objects.all()
+        self.assertEquals(len(all_profiles), 1)
 
+        # Check profile fields were saved correctly
+        all_profiles[0].user = user
+        all_profiles[0].website = user_profile.website
 
-class AboutPageTests(TestCase):
+class Chapter9ViewTests(TestCase):
 
-    def test_about_contains_create_message(self):
-        # Check if in the about page is there - and contains the specified message
-        # Exercise from Chapter 4
-        response = self.client.get(reverse('about'))
-        self.assertIn(b'This tutorial has been put together by', response.content)
-
-
-    def test_about_contain_image(self):
-        # Check if is there an image on the about page
-        # Chapter 4
-        response = self.client.get(reverse('about'))
-        self.assertIn(b'img src="/static/images/', response.content)
-
-    def test_about_using_template(self):
-        # Check the template used to render index page
-        # Exercise from Chapter 4
-        response = self.client.get(reverse('about'))
-
-        self.assertTemplateUsed(response, 'rango/about.html')
-
-
-
-class ModelTests(TestCase):
-
-    def setUp(self):
+    @chapter9
+    def test_registration_form_is_displayed_correctly(self):
+        #Access registration page
         try:
-            from populate_rango import populate
-            populate()
-        except ImportError:
-            print('The module populate_rango does not exist')
-        except NameError:
-            print('The function populate() does not exist or is not correct')
+            response = self.client.get(reverse('register'))
         except:
-            print('Something went wrong in the populate() function :-(')
+            try:
+                response = self.client.get(reverse('rango:register'))
+            except:
+                return False
 
+        # Check if form is rendered correctly
+        # self.assertIn('<h1>Register with Rango</h1>', response.content)
+        self.assertIn('<strong>register here!</strong><br />'.lower(), response.content.lower())
 
-    def get_category(self, name):
+        # Check form in response context is instance of UserForm
+        self.assertTrue(isinstance(response.context['user_form'], UserForm))
 
-        from rango.models import Category
+        # Check form in response context is instance of UserProfileForm
+        self.assertTrue(isinstance(response.context['profile_form'], UserProfileForm))
+
+        user_form = UserForm()
+        profile_form = UserProfileForm()
+
+        # Check form is displayed correctly
+        self.assertEquals(response.context['user_form'].as_p(), user_form.as_p())
+        self.assertEquals(response.context['profile_form'].as_p(), profile_form.as_p())
+
+        # Check submit button
+        self.assertIn('type="submit" name="submit" value="Register"', response.content)
+
+    @chapter9
+    def test_login_form_is_displayed_correctly(self):
+        #Access login page
         try:
-            cat = Category.objects.get(name=name)
-        except Category.DoesNotExist:
-            cat = None
-        return cat
-
-    def test_python_cat_added(self):
-        cat = self.get_category('Python')
-        self.assertIsNotNone(cat)
-
-    def test_python_cat_with_views(self):
-        cat = self.get_category('Python')
-        self.assertEquals(cat.views, 128)
-
-    def test_python_cat_with_likes(self):
-        cat = self.get_category('Python')
-        self.assertEquals(cat.likes, 64)
-
-
-class Chapter4ViewTests(TestCase):
-    def test_index_contains_hello_message(self):
-        # Check if there is the message 'hello world!'
-        response = self.client.get(reverse('index'))
-        self.assertIn('Rango says', response.content)
-
-    def test_does_index_contain_img(self):
-        # Check if the index page contains an img
-        response = self.client.get(reverse('index'))
-        self.assertIn('img', response.content)
-
-    def test_about_using_template(self):
-        # Check the template used to render index page
-        # Exercise from Chapter 4
-        response = self.client.get(reverse('about'))
-
-        self.assertTemplateUsed(response, 'rango/about.html')
-
-    def test_does_about_contain_img(self):
-        # Check if in the about page contains an image
-        response = self.client.get(reverse('about'))
-        self.assertIn('img', response.content)
-
-    def test_about_contains_create_message(self):
-        # Check if in the about page contains the message from the exercise
-        response = self.client.get(reverse('about'))
-        self.assertIn('This tutorial has been put together by', response.content)
-
-
-class Chapter5ViewTests(TestCase):
-
-    def setUp(self):
-        try:
-            from populate_rango import populate
-            populate()
-        except ImportError:
-            print('The module populate_rango does not exist')
-        except NameError:
-            print('The function populate() does not exist or is not correct')
+            response = self.client.get(reverse('login'))
         except:
-            print('Something went wrong in the populate() function :-(')
+            try:
+                response = self.client.get(reverse('rango:login'))
+            except:
+                return False
 
+        #Check form display
+        #Header
+        self.assertIn('<h1>Login to Rango</h1>'.lower(), response.content.lower())
 
-    def get_category(self, name):
+        #Username label and input text
+        self.assertIn('Username:', response.content)
+        self.assertIn('input type="text" name="username" value="" size="50"', response.content)
 
-        from rango.models import Category
+        #Password label and input text
+        self.assertIn('Password:', response.content)
+        self.assertIn('input type="password" name="password" value="" size="50"', response.content)
+
+        #Submit button
+        self.assertIn('input type="submit" value="submit"', response.content)
+
+    @chapter9
+    def test_login_provides_error_message(self):
+        # Access login page
         try:
-            cat = Category.objects.get(name=name)
-        except Category.DoesNotExist:
-            cat = None
-        return cat
-
-    def test_python_cat_added(self):
-        cat = self.get_category('Python')
-        self.assertIsNotNone(cat)
-
-    def test_python_cat_with_views(self):
-        cat = self.get_category('Python')
-
-        self.assertEquals(cat.views, 128)
-
-    def test_python_cat_with_likes(self):
-        cat = self.get_category('Python')
-        self.assertEquals(cat.likes, 64)
-
-    def test_view_has_title(self):
-        response = self.client.get(reverse('index'))
-
-        #Check title used correctly
-        self.assertIn('<title>', response.content)
-        self.assertIn('</title>', response.content)
-
-    # Need to add tests to:
-    # check admin interface - is it configured and set up
-
-    def test_admin_interface_page_view(self):
-        from admin import PageAdmin
-        self.assertIn('category', PageAdmin.list_display)
-        self.assertIn('url', PageAdmin.list_display)
-
-
-class Chapter6ViewTests(TestCase):
-
-    def setUp(self):
-        try:
-            from populate_rango import populate
-            populate()
-        except ImportError:
-            print('The module populate_rango does not exist')
-        except NameError:
-            print('The function populate() does not exist or is not correct')
+            response = self.client.post(reverse('login'), {'username': 'wronguser', 'password': 'wrongpass'})
         except:
-            print('Something went wrong in the populate() function :-(')
+            try:
+                response = self.client.post(reverse('rango:login'), {'username': 'wronguser', 'password': 'wrongpass'})
+            except:
+                return False
 
-
-    # are categories displayed on index page?
-
-    # does the category model have a slug field?
-
-
-    # test the slug field works..
-    def test_does_slug_field_work(self):
-        from rango.models import Category
-        cat = Category(name='how do i create a slug in django')
-        cat.save()
-        self.assertEqual(cat.slug,'how-do-i-create-a-slug-in-django')
-
-    # test category view does the page exist?
-
-
-    # test whether you can navigate from index to a category page
-
-
-    # test does index page contain top five pages?
-
-    # test does index page contain the words "most liked" and "most viewed"
-
-    # test does category page contain a link back to index page?
-
-
-class Chapter7ViewTests(TestCase):
-
-    def setUp(self):
+        print response.content
         try:
-            from forms import PageForm
-            from forms import CategoryForm
-
-        except ImportError:
-            print('The module forms does not exist')
-        except NameError:
-            print('The class PageForm does not exist or is not correct')
+            self.assertIn('wronguser', response.content)
         except:
-            print('Something else went wrong :-(')
+            self.assertIn('Invalid login details supplied.', response.content)
 
-    pass
-    # test is there a PageForm in rango.forms
+    @chapter9
+    def test_login_redirects_to_index(self):
+        # Create a user
+        test_utils.create_user()
 
-    # test is there a CategoryForm in rango.forms
+        # Access login page via POST with user data
+        try:
+            response = self.client.post(reverse('login'), {'username': 'testuser', 'password': 'test1234'})
+        except:
+            try:
+                response = self.client.post(reverse('rango:login'), {'username': 'testuser', 'password': 'test1234'})
+            except:
+                return False
 
-    # test is there an add page page?
+        # Check it redirects to index
+        self.assertRedirects(response, reverse('index'))
 
-    # test is there an category page?
+    @chapter9
+    def test_upload_image(self):
+        # Create fake user and image to upload to register user
+        image = SimpleUploadedFile("testuser.jpg", "file_content", content_type="image/jpeg")
+        try:
+            response = self.client.post(reverse('register'),
+                             {'username': 'testuser', 'password':'test1234',
+                              'email':'testuser@testuser.com',
+                              'website':'http://www.testuser.com',
+                              'picture':image } )
+        except:
+            try:
+                response = self.client.post(reverse('rango:register'),
+                                 {'username': 'testuser', 'password':'test1234',
+                                  'email':'testuser@testuser.com',
+                                  'website':'http://www.testuser.com',
+                                  'picture':image } )
+            except:
+                return False
 
+        # Check user was successfully registered
+        self.assertIn('thank you for registering!'.lower(), response.content.lower())
+        user = User.objects.get(username='testuser')
+        user_profile = UserProfile.objects.get(user=user)
+        path_to_image = './media/profile_images/testuser.jpg'
 
-    # test if index contains link to add category page
-    #<a href="/rango/add_category/">Add a New Category</a><br />
+        # Check file was saved properly
+        self.assertTrue(os.path.isfile(path_to_image))
 
-
-    # test if the add_page.html template exists.
-
-
-
+        # Delete fake file created
+        default_storage.delete('./media/profile_images/testuser.jpg')

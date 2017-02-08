@@ -31,6 +31,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = [u'hopedoolan.pythonanywhere.com']
 
+LOGIN_URL = '/rango/login/'
+
 
 # Application definition
 

@@ -2,7 +2,7 @@
     {% if c == act_cat %}
         <li>
         <strong>
-            <a href="{% url 'showcategory' c.slug %}">{{ c.name }}</a>
+            <a href="{% url 'show_category' c.slug %}">{{ c.name }}</a>
         </strong>
         </li>
     {% else %}
