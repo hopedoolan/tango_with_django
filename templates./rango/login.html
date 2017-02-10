@@ -7,9 +7,6 @@
 
 {% block body_block %}
 <h1>Login to Rango</h1>
-{% if form.errors%}
-    <p class="error"> Sorry, that's not a valid username or password</p>
-{% endif %}
 
 <form id="login_form" method="post" action="{% url 'login' %}">
     {% csrf_token %}
